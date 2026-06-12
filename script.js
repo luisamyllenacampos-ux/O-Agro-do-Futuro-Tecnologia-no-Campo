@@ -1,140 +1,116 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    /* --- SISTEMA DE SEÇÕES EXPANSÍVEIS (ACCORDION) --- */
+    // 1. ACESSOS DA CAIXA EXPANSÍVEL (ACCORDION)
     const accordionHeaders = document.querySelectorAll('.accordion-header');
-
+    
     accordionHeaders.forEach(header => {
         header.addEventListener('click', () => {
-            const isExpanded = header.getAttribute('aria-expanded') === 'true';
-            const body = header.nextElementSibling;
-
-            document.querySelectorAll('.accordion-header').forEach(otherHeader => {
-                if (otherHeader !== header) {
-                    otherHeader.setAttribute('aria-expanded', 'false');
-                    otherHeader.nextElementSibling.style.maxHeight = null;
-                }
-            });
-
-            if (isExpanded) {
-                header.setAttribute('aria-expanded', 'false');
-                body.style.maxHeight = null;
-            } else {
+            const item = header.parentElement;
+            const isCurrentlyActive = item.classList.contains('active');
+            
+            document.querySelectorAll('.accordion-item').forEach(i => i.classList.remove('active'));
+            document.querySelectorAll('.accordion-header').forEach(h => h.setAttribute('aria-expanded', 'false'));
+            
+            if (!isCurrentlyActive) {
+                item.classList.add('active');
                 header.setAttribute('aria-expanded', 'true');
-                body.style.maxHeight = body.scrollHeight + "px";
             }
         });
     });
 
+    // 2. ACESSIBILIDADE: ALTERAÇÃO DA ESCALA DE FONTE DA PÁGINA
+    let currentFontScale = 100;
+    const btnIncreaseFont = document.getElementById('btn-increase-font');
+    const btnDecreaseFont = document.getElementById('btn-decrease-font');
 
-    /* --- SISTEMA DE ACESSIBILIDADE NATIVA --- */
-    let tamanhoFonteAtual = 100; 
-    const bodyElement = document.body;
-    const btnAumentar = document.getElementById('btnAumentarFonte');
-    const btnDiminuir = document.getElementById('btnDiminuirFonte');
-    const btnContraste = document.getElementById('btnAlternarContraste');
-    const btnIniciarVoz = document.getElementById('btnIniciarVoz');
-    const btnPararVoz = document.getElementById('btnPararVoz');
-
-    // Escalonamento de fontes integrado ao clamp()
-    btnAumentar.addEventListener('click', () => {
-        if (tamanhoFonteAtual < 140) {
-            tamanhoFonteAtual += 10;
-            document.documentElement.style.fontSize = `calc(clamp(10px, 1vw + 10px, 16px) * ${tamanhoFonteAtual / 100})`;
+    btnIncreaseFont.addEventListener('click', () => {
+        if(currentFontScale < 135) {
+            currentFontScale += 5;
+            document.documentElement.style.fontSize = `${currentFontScale}%`;
         }
     });
 
-    btnDiminuir.addEventListener('click', () => {
-        if (tamanhoFonteAtual > 80) {
-            tamanhoFonteAtual -= 10;
-            document.documentElement.style.fontSize = `calc(clamp(10px, 1vw + 10px, 16px) * ${tamanhoFonteAtual / 100})`;
+    btnDecreaseFont.addEventListener('click', () => {
+        if(currentFontScale > 85) {
+            currentFontScale -= 5;
+            document.documentElement.style.fontSize = `${currentFontScale}%`;
         }
     });
 
-    // Alternar Contraste / Dark Mode
-    btnContraste.addEventListener('click', () => {
-        bodyElement.classList.toggle('dark-mode');
+    // 3. ACESSIBILIDADE: TOGGLE DE MODO ESCURO/CLARO
+    const btnToggleTheme = document.getElementById('btn-toggle-theme');
+    btnToggleTheme.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if(currentTheme === 'dark') {
+            document.documentElement.removeAttribute('data-theme');
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
     });
 
-    // Leitura por Voz Inteligente (SpeechSynthesis API) focada no Conteúdo Principal
-    let sinteseVoz = window.speechSynthesis;
-    let expressaoUtterance = null;
+    // 4. ACESSIBILIDADE: LEITURA POR VOZ VIA SPEECHSYNTHESIS API
+    const btnSpeak = document.getElementById('btn-speak');
+    const btnStopSpeak = document.getElementById('btn-stop-speak');
+    let speechUtterance = null;
 
-    btnIniciarVoz.addEventListener('click', () => {
-        sinteseVoz.cancel(); // Para execuções anteriores residuais
-
-        const mainContent = document.getElementById('conteudo');
-        // Seleciona exclusivamente tags informativas contextuais para evitar leitura de elementos de UI
-        const blocosDeTexto = mainContent.querySelectorAll('h2, h3, p:not(.form-callout):not(.comments-intro):not(.comment-text)');
-        let textoParaLer = "";
+    btnSpeak.addEventListener('click', () => {
+        window.speechSynthesis.cancel();
         
-        blocosDeTexto.forEach(bloco => {
-            textoParaLer += bloco.textContent + " . ";
-        });
-
-        if (textoParaLer.trim() !== "") {
-            expressaoUtterance = new SpeechSynthesisUtterance(textoParaLer);
-            expressaoUtterance.lang = 'pt-BR';
-            expressaoUtterance.rate = 1.0; 
-            sinteseVoz.speak(expressaoUtterance);
-        }
+        // Coleta o texto exclusivamente do conteúdo principal (main)
+        const textToRead = document.getElementById('main-content').innerText;
+        
+        speechUtterance = new SpeechSynthesisUtterance(textToRead);
+        speechUtterance.lang = 'pt-BR';
+        speechUtterance.rate = 1.0;
+        
+        window.speechSynthesis.speak(speechUtterance);
     });
 
-    btnPararVoz.addEventListener('click', () => {
-        sinteseVoz.cancel();
+    btnStopSpeak.addEventListener('click', () => {
+        window.speechSynthesis.cancel();
     });
 
+    // 5. INTERATIVIDADE E VALIDAÇÃO DO FORMULÁRIO DO SEMINÁRIO
+    const seminarForm = document.getElementById('agro-seminar-form');
+    const formFeedback = document.getElementById('form-feedback');
 
-    /* --- VALIDAÇÃO DO FORMULÁRIO DE INSCRIÇÃO --- */
-    const seminarioForm = document.getElementById('seminarioForm');
-    const formFeedback = document.getElementById('formFeedback');
-
-    seminarioForm.addEventListener('submit', (e) => {
+    seminarForm.addEventListener('submit', (e) => {
         e.preventDefault();
         
-        const nome = document.getElementById('inputNome').value.trim();
-        const email = document.getElementById('inputEmail').value.trim();
-        const cidade = document.getElementById('inputCidade').value.trim();
-        const estado = document.getElementById('inputEstado').value.trim();
-        const pais = document.getElementById('inputPais').value.trim();
+        const name = document.getElementById('input-name').value.trim();
+        const email = document.getElementById('input-email').value.trim();
+        const city = document.getElementById('input-city').value.trim();
+        const state = document.getElementById('input-state').value.trim();
+        const country = document.getElementById('input-country').value.trim();
 
-        if (!nome || !email || !cidade || !estado || !pais) {
-            formFeedback.className = "form-feedback error";
-            formFeedback.textContent = "Por favor, preencha todos os campos do formulário.";
-            return;
+        if(name && email && city && state && country) {
+            formFeedback.style.color = '#4da6ff';
+            formFeedback.textContent = `Sucesso! Inscrição de ${name} confirmada no Seminário Agro do Futuro.`;
+            seminarForm.reset();
+        } else {
+            formFeedback.style.color = '#ff4d4d';
+            formFeedback.textContent = 'Erro: Por favor preencha todos os campos corretamente.';
         }
-
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            formFeedback.className = "form-feedback error";
-            formFeedback.textContent = "Por favor, insira um endereço de e-mail válido.";
-            return;
-        }
-
-        formFeedback.className = "form-feedback success";
-        formFeedback.textContent = `Inscrição realizada com sucesso! Parabéns, ${nome}.`;
-        seminarioForm.reset();
     });
 
-
-    /* --- SESSÃO INTERATIVA DE COMENTÁRIOS --- */
-    const commentForm = document.getElementById('commentForm');
-    const txtComentario = document.getElementById('txtComentario');
-    const commentsFeed = document.getElementById('commentsFeed');
+    // 6. ADICIONAR COMENTÁRIOS DE FORMA DINÂMICA
+    const commentForm = document.getElementById('comment-form');
+    const commentsList = document.getElementById('comments-list');
 
     commentForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const texto = txtComentario.value.trim();
+        const textElement = document.getElementById('comment-text');
+        const commentText = textElement.value.trim();
 
-        if (texto === "") return;
-
-        const novoComentario = document.createElement('div');
-        novoComentario.className = 'comment-item';
-        novoComentario.innerHTML = `
-            <div class="comment-meta"><strong>Leitor Anônimo</strong> — Agora mesmo</div>
-            <p class="comment-text">${texto}</p>
-        `;
-
-        commentsFeed.insertBefore(novoComentario, commentsFeed.firstChild);
-        txtComentario.value = "";
+        if (commentText) {
+            const commentItem = document.createElement('div');
+            commentItem.className = 'comment-item';
+            commentItem.innerHTML = `
+                <p class="comment-meta"><strong>Leitor Participante</strong> • Agora mesmo</p>
+                <p class="comment-body">${commentText}</p>
+            `;
+            commentsList.insertBefore(commentItem, commentsList.firstChild);
+            textElement.value = '';
+        }
     });
 });
